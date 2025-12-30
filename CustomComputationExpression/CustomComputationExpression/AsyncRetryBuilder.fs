@@ -2,14 +2,14 @@ module CustomComputationExpression
 
 open System
 
-type RetryState<'T, 'Error> =
+type RetryState<'Error> =
     { Action: unit -> Result<unit, 'Error> Async
       Retries: TimeSpan list }
 
-let private runWithRetries<'T, 'Error>
-    (action: unit -> Result<'T, 'Error> Async)
+let private runWithRetries<'Error>
+    (action: unit -> Result<unit, 'Error> Async)
     (retries: TimeSpan list)
-    : Result<'T, 'Error> Async =
+    : Result<unit, 'Error> Async =
     let rec attempt (retriesLeft: TimeSpan list) =
         async {
             printfn $"Attempting execution... Retries left: %i{List.length retriesLeft}"
@@ -28,18 +28,18 @@ let private runWithRetries<'T, 'Error>
     attempt retries
 
 module AsyncRetry =
-    let run (state: RetryState<_, _>) =
+    let run (state: RetryState<_>) =
         runWithRetries state.Action state.Retries
 
 type AsyncRetryBuilder() =
     member _.Return(value) = async { return Ok value }
 
-    member _.Bind(action: Result<_, _> Async, f) =
+    member _.Bind(action: Result<unit, _> Async, f) =
         async {
             let! result = action
 
             match result with
-            | Ok data -> return! f data
+            | Ok _ -> return! f ()
             | Error e -> return Error e
         }
 
@@ -64,7 +64,7 @@ type AsyncRetryBuilder() =
           Retries = value }
 
     [<CustomOperation("withAction")>]
-    member _.WithAction(state: RetryState<'T, 'Error>, newAction: unit -> Result<unit, 'Error> Async) =
+    member _.WithAction(state: RetryState<'Error>, newAction: unit -> Result<unit, 'Error> Async) =
         { state with
             Action =
                 fun () ->

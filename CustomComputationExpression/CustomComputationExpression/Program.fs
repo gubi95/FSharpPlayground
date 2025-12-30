@@ -52,10 +52,10 @@ let main () =
         withAction asyncAction1
         withAction asyncAction2
 
-        let! _ =
+        do!
             async {
                 printfn "Attempting inline action 1..."
-                return Ok 5
+                return Ok()
             }
 
         do!
