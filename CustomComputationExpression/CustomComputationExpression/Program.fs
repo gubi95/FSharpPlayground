@@ -2,6 +2,7 @@
 open CustomComputationExpression
 
 let mutable failAction2 = true
+let mutable failAction3 = true
 
 let asyncAction1 () : Result<unit, string> Async =
     async {
@@ -22,6 +23,25 @@ let asyncAction2 () : Result<unit, string> Async =
             | false -> Ok()
     }
 
+let asyncAction3 () : Result<unit, string> Async =
+    async {
+        printfn "Attempting action 3..."
+
+        return
+            match failAction3 with
+            | true ->
+                failAction3 <- false
+                printfn "Action 3 failed."
+                Error "Action 3 failed"
+            | false -> Ok()
+    }
+
+let alwaysFailingAction () : Result<unit, string> Async =
+    async {
+        printfn "Attempting always failing action..."
+        return Error "Always failing action failed"
+    }
+
 let main () =
     asyncRetry {
         withRetries
@@ -38,11 +58,18 @@ let main () =
                 return Ok 5
             }
 
-        let! _ =
+        do!
             asyncRetry {
-                printfn "Attempting inline action 2..."
-                return Ok 10
+                printfn "Attempting inline action 2 with retry..."
+
+                withRetries [ (TimeSpan.FromSeconds 1.0) ]
+                withAction asyncAction3
+
+                return ()
             }
+            |> AsyncRetry.run
+
+        do! alwaysFailingAction ()
 
         return ()
     }

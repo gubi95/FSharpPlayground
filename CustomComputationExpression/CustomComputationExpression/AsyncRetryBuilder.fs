@@ -12,7 +12,7 @@ let private runWithRetries<'T, 'Error>
     : Result<'T, 'Error> Async =
     let rec attempt (retriesLeft: TimeSpan list) =
         async {
-            printfn "Attempting execution..."
+            printfn $"Attempting execution... Retries left: %i{List.length retriesLeft}"
             let! result = action ()
 
             match result with
